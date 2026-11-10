@@ -17,3 +17,4 @@ Thư mục này phục vụ Chương 4 (Dashboard & Trực quan hóa) của đ�
      - **Trang 1: Executive Market Overview** (KPIs, Bản đồ phân bố, Phân khúc thị trường theo Tier).
      - **Trang 2: Price Elasticity & Spatial Breakdown** (Biểu đồ suy giảm theo khoảng cách tới Q.1 / VNU-HCM, Tác động của các tiện ích máy lạnh/gác lửng).
      - **Trang 3: Deal & Scam Decision Matrix** (Scatter plot Actual Price vs Predicted Price, Bảng tra cứu tin đăng rủi ro cao / giá hời có liên kết URL Chợ Tốt).
+

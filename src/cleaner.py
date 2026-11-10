@@ -259,3 +259,4 @@ def clean_rental_dataset(df_input: Optional[pd.DataFrame] = None) -> Tuple[pd.Da
 if __name__ == "__main__":
     df_cleaned, report = clean_rental_dataset()
     logger.info(f"Cleaner pipeline completed successfully! Cleaned records: {len(df_cleaned)}")
+

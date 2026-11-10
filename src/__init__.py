@@ -5,3 +5,4 @@ for Southern Vietnam Rental Market.
 """
 
 __version__ = "1.0.0"
+

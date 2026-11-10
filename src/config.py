@@ -172,3 +172,4 @@ FINAL_SCHEMA_COLUMNS = [
     "valuation_gap_pct",
     "deal_status",
 ]
+

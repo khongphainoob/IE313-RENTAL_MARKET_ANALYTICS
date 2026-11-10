@@ -189,3 +189,4 @@ if __name__ == "__main__":
     print(tests["amenity_tests"].to_string())
     print("\n--- SPEARMAN CORRELATIONS ---")
     print(tests["spearman_correlations"].to_string())
+

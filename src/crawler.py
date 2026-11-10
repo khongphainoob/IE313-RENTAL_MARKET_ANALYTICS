@@ -80,6 +80,7 @@ def crawl_stratified(
     max_per_area: Optional[int] = None,
     output_jsonl: Optional[str] = None,
     request_delay: float = 0.35,
+    overwrite: bool = False,
 ) -> Dict[str, Any]:
     """Execute multi-stage stratified crawl across districts."""
     if target_regions is None:
@@ -94,9 +95,13 @@ def crawl_stratified(
     records_per_district: Dict[str, int] = {}
     seen_ad_ids = set()
 
+    if overwrite and out_path.exists():
+        logger.info(f"Overwrite enabled. Removing existing {out_path}...")
+        out_path.unlink()
+
     # If appending or checking prior IDs
     if out_path.exists():
-        logger.info(f"Existing raw file found. Scanning existing ad_ids...")
+        logger.info("Existing raw file found. Scanning existing ad_ids...")
         try:
             with open(out_path, "r", encoding="utf-8") as f:
                 for line in f:
@@ -141,6 +146,8 @@ def crawl_stratified(
                         break
 
                     for ad in ads:
+                        if max_per_area and district_records >= max_per_area:
+                            break
                         ad_id = ad.get("ad_id")
                         # Add tracking fields
                         ad["_crawled_at"] = datetime.datetime.now().isoformat()
@@ -259,13 +266,20 @@ if __name__ == "__main__":
         action="store_true",
         help="Also export to interim Parquet after crawl",
     )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing raw jsonl file instead of appending",
+    )
     args = parser.parse_args()
 
     crawl_stratified(
         target_regions=args.regions,
         max_per_area=args.max_per_area,
         request_delay=args.delay,
+        overwrite=args.overwrite,
     )
 
     if args.to_interim or True:  # Default to converting to interim
         raw_to_interim()
+

@@ -144,3 +144,4 @@ ie313-rental-market-analytics/
 | **24** | `predicted_price` | `float64` | LightGBM | Mức giá hợp lý ($\hat{y}$) do mô hình AI định giá (Triệu VNĐ/tháng). |
 | **25** | `valuation_gap_pct` | `float64` | Modeling | Độ lệch giá (%) = `((price_million - predicted_price) / predicted_price) * 100`. |
 | **26** | `deal_status` | `category` | Case Study | Nhãn phục vụ quyết định: `GOOD_DEAL` (Hời), `FAIR_PRICE` (Chuẩn), `OVERPRICED` (Đắt), `SCAM_RISK` (Nghi vấn tin ảo). |
+

@@ -195,3 +195,4 @@ def build_feature_pipeline(df_cleaned: Optional[pd.DataFrame] = None) -> pd.Data
 if __name__ == "__main__":
     df_feat = build_feature_pipeline()
     logger.info(f"Feature engineering pipeline completed successfully! Output rows: {len(df_feat)}")
+

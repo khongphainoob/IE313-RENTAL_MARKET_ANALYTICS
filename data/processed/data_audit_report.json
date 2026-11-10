@@ -1,46 +1,46 @@
 {
-  "step_0_raw_records": 1159,
+  "step_0_raw_records": 2970,
   "funnel_steps": [
     {
       "step": "0_RawInput",
-      "count": 1159,
+      "count": 2970,
       "dropped": 0,
       "retention_pct": 100.0,
       "description": "Dữ liệu thô ban đầu thu thập từ API Chợ Tốt"
     },
     {
       "step": "1a_DedupAdId",
-      "count": 1159,
+      "count": 2970,
       "dropped": 0,
       "retention_pct": 100.0,
       "description": "Khử trùng lặp khóa chính ad_id"
     },
     {
       "step": "1b_DedupBrokerSpam",
-      "count": 1148,
-      "dropped": 11,
-      "retention_pct": 99.05,
+      "count": 2902,
+      "dropped": 68,
+      "retention_pct": 97.71,
       "description": "Khử trùng lặp spam môi giới cùng phòng đăng nhiều lần"
     },
     {
       "step": "2_DomainSanity",
-      "count": 1092,
-      "dropped": 56,
-      "retention_pct": 94.22,
+      "count": 2798,
+      "dropped": 104,
+      "retention_pct": 94.21,
       "description": "Lọc miền hợp lệ: Giá [0.5, 25.0] tr, Diện tích [5.0, 120.0] m²"
     },
     {
       "step": "3_GroupedIQROutliers",
-      "count": 1045,
-      "dropped": 47,
-      "retention_pct": 90.16,
+      "count": 2678,
+      "dropped": 120,
+      "retention_pct": 90.17,
       "description": "Lọc ngoại lai đơn giá (price_per_m2_k) theo phương pháp Grouped IQR từng Quận"
     },
     {
       "step": "4_MissingImputed",
-      "count": 1045,
+      "count": 2678,
       "dropped": 0,
-      "retention_pct": 90.16,
+      "retention_pct": 90.17,
       "description": "Điền khuyết tiền cọc (theo tỷ lệ Quận) và tọa độ địa lý (theo tâm Phường)"
     }
   ]
