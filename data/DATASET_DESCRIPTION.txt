@@ -1,0 +1,134 @@
+================================================================================
+HO SO MO TA DU LIEU & TU DIEN DU LIEU (DATASET METADATA & CODEBOOK)
+DO AN MON HOC: IE313 - PHAN TICH VA TRUC QUAN HOA DU LIEU
+TRUONG: DAI HOC CONG NGHE THONG TIN - DHQG TP.HCM (UIT - VNUHCM)
+================================================================================
+
+1. THONG TIN TONG QUAN VE BO DU LIEU (DATASET PROVENANCE)
+--------------------------------------------------------------------------------
+- Ten de tai: Phan tich khong gian - kinh te thi truong phong tro TP.HCM & Binh Duong:
+  Mo hinh dinh gia hop ly (Fair-Value Pricing) va He thong phat hien tin bat thuong
+  (Scam & Good Deal Radar) tren nen tang Cho Tot.
+- Sinh vien thuc hien: Truong Huy Hoang (MSSV: 24520574)
+- Nen tang thu thap: Cho Tot Nha / Nha Tot (nhatot.com) - Chuyen muc Phong tro (cg=1050).
+- Phuong phap thu thap: Cao phan tang tu dong qua API Gateway cua Cho Tot:
+  GET https://gateway.chotot.com/v1/public/ad-listing
+- Pham vi khong gian: 30 don vi hanh chinh (22 Quan/Huyen TP.HCM + 8 TP/Huyen Binh Duong).
+- Pham vi thoi gian: Tin dang hoat dong tu 11/2024 den 11/2026 (95% o Quy 4/2026).
+- Quy mo mau tho (Raw Data): 2.971 dong x 104 cot goc.
+  + File CSV: data/raw/chotot_raw_hcm_bd.csv
+  + File Excel: data/raw/chotot_raw_hcm_bd.xlsx
+  + File JSON Lines: data/raw/chotot_raw_hcm_bd.jsonl
+- Quy mo mau sach (Processed Data): 2.678 dong x 26 cot chuan hoa.
+  + File CSV: data/processed/rental_scored_deals.csv
+- Ty le giu lai sau lam sach: 90.17% (loai bo 9.83% spam, sai mien va ngoai lai).
+
+--------------------------------------------------------------------------------
+2. HUONG DAN KIEM CHUNG DANH CHO GIANG VIEN (VERIFICATION GUIDE)
+--------------------------------------------------------------------------------
+Giang vien co the kiem chung tinh xac thuc cua bo du lieu de dang:
+1. Mo file Excel 'data/raw/chotot_raw_hcm_bd.xlsx' hoac CSV 'chotot_raw_hcm_bd.csv'.
+2. Cot thu 3 co ten la 'ad_url'. Nhan vao bat ky duong link nao trong cot nay:
+   Format: https://www.nhatot.com/{list_id}.htm
+3. Trinh duyet se mo truc tiep tin dang thuc te tren san Cho Tot voi day du hinh anh,
+   so dien thoai lien he, dia chi va mo ta goc cua chu phong.
+
+--------------------------------------------------------------------------------
+3. QUY TRINH TIEN XU LY 5 TANG (DATA CLEANING FUNNEL)
+--------------------------------------------------------------------------------
+Du lieu di qua 5 tang lam sach de dam bao tinh khach quan:
+- Tang 0 (Raw Input): 2.971 ban ghi thu tu API (100.0%).
+- Tang 1a (Dedup ad_id): 2.970 ban ghi (loai 1 ban ghi trung khoa chinh).
+- Tang 1b (Dedup Broker Spam): 2.902 ban ghi (loai 68 ban ghi do 1 moi gioi dang trung
+  1 phong tro nhieu lan bang cac tieu de khac nhau).
+- Tang 2 (Domain Sanity): 2.798 ban ghi (loai 104 ban ghi nhap sai don vi gia va dien tich:
+  chi giu phong co gia tu 0.5 den 25.0 trieu, dien tich tu 5.0 den 120.0 m2).
+- Tang 3 (Grouped IQR Outliers): 2.678 ban ghi (loai 120 diem ngoai lai cuc bo theo tung
+  Quan rieng biet dua tren dai [Q1 - 1.5*IQR, Q3 + 1.5*IQR] cua don gia price_per_m2_k).
+- Tang 4 (Missing Imputation): Dien khuyet tien coc theo ty le trung vi cua tung Quan
+  va noi suy toa do GPS theo toa do tam cua Phuong/Xa.
+=> Tong so mau sach dat chuan: 2.678 ban ghi (Retention rate: 90.17%).
+
+--------------------------------------------------------------------------------
+4. TU DIEN DU LIEU CHI TIET (26 COT CHUAN TRONG FILE NOP)
+File luu tru: data/processed/rental_scored_deals.csv
+--------------------------------------------------------------------------------
+
+[NHOM 1: DINH DANH & NGUON GOC]
+1.  ad_id              (int64)      : Ma dinh danh duy nhat cua tin dang (Primary Key).
+2.  list_id            (int64)      : Ma bai viet dung de ghep URL xem tin that tren web.
+3.  account_id         (int64)      : Ma tai khoan nguoi dang (dung de phat hien spam).
+
+[NHOM 2: THOI GIAN & KHONG GIAN DIA LY]
+4.  list_time          (datetime)   : Thoi diem tin duoc cap nhat/day tin gan nhat (YYYY-MM-DD HH:MM:SS).
+5.  region_name        (string)     : Tinh/Thanh pho ('Tp Ho Chi Minh' hoac 'Binh Duong').
+6.  area_name          (string)     : Quan/Huyen/Thanh pho truc thuoc (30 don vi hanh chinh).
+7.  ward_name          (string)     : Phuong/Xa/Thi tran noi phong tro toa lac.
+8.  street_name        (string)     : Ten duong/tuyen pho (dien 'Dang cap nhat' neu khuyet).
+9.  longitude          (float64)    : Kinh do dia ly WGS84 (mien hop le [106.2, 107.2]).
+10. latitude           (float64)    : Vi do dia ly WGS84 (mien hop le [10.3, 11.6]).
+20. dist_to_q1_km      (float64)    : Khoang cach Haversine (km) toi Cho Ben Thanh, Quan 1 (10.7725, 106.6980).
+21. dist_to_vnuhcm_km  (float64)    : Khoang cach Haversine (km) toi Khu Do thi DHQG-HCM (10.8756, 106.8007).
+
+[NHOM 3: KINH TE, DIEN TICH & TINH TRANG PHONG]
+11. size_m2            (float64)    : Dien tich su dung cua phong (m2), mien gia tri [10.0, 100.0].
+12. price_million      (float64)    : BIEN MUC TIEU (Y) - Gia thue phong (Trieu VND/thang), mien [0.6, 13.5].
+13. price_per_m2_k     (float64)    : Don gia thue tren moi m2 (Nghin VND/m2) = (price_million * 1000) / size_m2.
+14. deposit_million    (float64)    : Tien dat coc giu phong (Trieu VND).
+15. furnishing_status  (category)   : Tinh trang noi that ('Day du', 'Co ban', 'Nha trong', 'Khong ro').
+
+[NHOM 4: TIEN ICH TRICH XUAT BANG NLP REGEX]
+16. has_mezzanine      (int8: 0/1)  : 1 neu co gac lung, gac cao, gac duc (chiem 23.1% tong mau).
+17. has_ac             (int8: 0/1)  : 1 neu co may lanh, dieu hoa (chiem 39.3% tong mau).
+18. is_free_curfew     (int8: 0/1)  : 1 neu gio giac tu do, khoa van tay, khong chung chu (chiem 54.9%).
+19. has_balcony_window (int8: 0/1)  : 1 neu co ban cong, cua so lon thoang mat (chiem 49.6%).
+
+[NHOM 5: HANH VI, PHAN KHUC & MO HINH AI]
+22. seller_type        (category)   : Nhom nguoi dang: 'Chinh chu' (840 tin), 'Moi gioi cong khai' (1.831 tin),
+                                      'Moi gioi tra hinh' (7 tin).
+23. market_cluster     (category)   : Phan khuc K-Means: 'Tier 1: Sinh vien/Binh dan' (985 tin),
+                                      'Tier 2: Tien nghi tam trung' (604 tin), 'Tier 3: Studio/CHDV' (1.089 tin).
+24. predicted_price    (float64)    : Gia thue hop ly (y_hat, Trieu VND) do mo hinh AI du doan.
+25. valuation_gap_pct  (float64)    : Do lech gia (%) = ((price_million - predicted_price) / predicted_price) * 100.
+26. deal_status        (category)   : Nhan quyet dinh phuc vu Case Study:
+                                      - GOOD_DEAL   (37 tin) : Re hon >= 15% va do Chinh chu dang.
+                                      - SCAM_RISK   (24 tin) : Re bat thuong >= 25% va nghi van bay tin ao.
+                                      - OVERPRICED  (45 tin) : Dat hon >= 20% so voi gia hop ly.
+                                      - FAIR_PRICE  (2.572 tin): Gia nam trong vung can bang thi truong.
+
+--------------------------------------------------------------------------------
+5. BANG THONG KE MO TA DINH LUONG (5-NUMBER SUMMARY TREN 2.678 MAU SACH)
+--------------------------------------------------------------------------------
+Bien so             Don vi      Mean     Std     Min     Q1(25%)   Median(50%)  Q3(75%)   Max
+------------------------------------------------------------------------------------------
+price_million       Trieu       3.73    1.58    0.60       2.60       3.60        4.60   13.50
+size_m2             m2         26.34    9.82   10.00      20.00      25.00       30.00  100.00
+price_per_m2_k      k/m2      147.62   52.35   14.62     111.15     145.00      180.00  343.75
+dist_to_q1_km       km          7.35    4.99    0.21       3.70       6.41        9.50   44.70
+dist_to_vnuhcm_km   km         17.94    5.36    0.97      15.29      18.45       21.27   36.74
+------------------------------------------------------------------------------------------
+
+* Nhan xet trong tam:
+- Gia thue trung vi toan thi truong la 3.60 trieu/thang (50% phong tap trung tu 2.60 - 4.60 trieu).
+- Dien tich trung vi la 25.0 m2, don gia trung vi la 145.000 VND/m2.
+- Khoang cach toi Quan 1 co tuong quan nghich rat manh voi gia phong (rho = -0.464, p < 10^-140),
+  the hien ro quy luat suy giam gia thue theo cu ly khong gian (Distance Decay).
+
+--------------------------------------------------------------------------------
+6. DANH SACH CAC FILE TRONG THU MUC DU LIEU
+--------------------------------------------------------------------------------
+data/
+|-- DATASET_DESCRIPTION.txt         <- File text mo ta tong quan nay (de nop cho Thay)
+|-- DATASET_METADATA.md             <- Ban dinh dang Markdown chi tiet
+|-- raw/
+|   |-- chotot_raw_hcm_bd.xlsx      <- File Excel du lieu tho (2.971 dong x 104 cot - co link ad_url)
+|   |-- chotot_raw_hcm_bd.csv       <- File CSV du lieu tho (2.971 dong)
+|   |-- chotot_raw_hcm_bd.jsonl     <- File JSON Lines goc tu API Cho Tot
+|   `-- crawl_metadata.json         <- Log thoi gian cao va thong ke theo tung Quan
+|-- interim/
+|   `-- deduplicated_data.parquet   <- Du lieu trung gian da khu trung lap
+`-- processed/
+    |-- rental_cleaned_full.csv     <- Du lieu sach da trich dac trung (2.678 dong)
+    |-- rental_scored_deals.csv     <- Du lieu sach 26 cot da dinh gia AI & gan nhan Case Study
+    `-- data_audit_report.json      <- Bao cao pheu loc truoc va sau lam sach
+================================================================================
