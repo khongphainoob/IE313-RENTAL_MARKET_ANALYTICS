@@ -42,9 +42,12 @@ env/
 *.sublime-project
 *.sublime-workspace
 
-# Operating System
+# Operating System & Office temp files
 .DS_Store
 Thumbs.db
+~$*.xlsx
+~$*.docx
+~$*.pptx
 
 # Model checkpoints / large binaries
 *.tmp
