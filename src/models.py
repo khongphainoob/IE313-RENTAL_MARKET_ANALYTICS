@@ -89,6 +89,12 @@ def evaluate_regressors(
         X, y, test_size=test_size, random_state=random_state
     )
 
+    # Convert to contiguous float32 numpy arrays for compatibility with NumPy 2.x / LightGBM
+    X_train_np = np.ascontiguousarray(X_train.values, dtype=np.float32)
+    y_train_np = np.ascontiguousarray(y_train.values, dtype=np.float32)
+    X_test_np = np.ascontiguousarray(X_test.values, dtype=np.float32)
+    y_test_np = np.ascontiguousarray(y_test.values, dtype=np.float32)
+
     models_dict = {
         "Ridge": Ridge(alpha=1.0),
         "RandomForest": RandomForestRegressor(
@@ -117,14 +123,14 @@ def evaluate_regressors(
 
     for name, model in models_dict.items():
         logger.info(f"Training {name}...")
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+        model.fit(X_train_np, y_train_np)
+        y_pred = model.predict(X_test_np)
         y_pred = np.clip(y_pred, 0.5, 30.0)
 
-        r2 = r2_score(y_test, y_pred)
-        mae = mean_absolute_error(y_test, y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        mape = mean_absolute_percentage_error(y_test, y_pred) * 100.0
+        r2 = r2_score(y_test_np, y_pred)
+        mae = mean_absolute_error(y_test_np, y_pred)
+        rmse = np.sqrt(mean_squared_error(y_test_np, y_pred))
+        mape = mean_absolute_percentage_error(y_test_np, y_pred) * 100.0
 
         benchmark_results[name] = {
             "R2": round(r2, 4),
@@ -200,7 +206,8 @@ def run_full_modeling_pipeline(df_input: Optional[pd.DataFrame] = None) -> Tuple
     logger.info(f"Saved best regression model to {LGBM_MODEL_PATH}")
 
     # Predict fair-value price for entire dataset
-    df["predicted_price"] = np.round(best_model.predict(X), 2)
+    X_full_np = np.ascontiguousarray(X.values, dtype=np.float32)
+    df["predicted_price"] = np.round(best_model.predict(X_full_np), 2)
     # Clip predicted price to reasonable minimum
     df["predicted_price"] = np.clip(df["predicted_price"], 0.5, 30.0)
 
