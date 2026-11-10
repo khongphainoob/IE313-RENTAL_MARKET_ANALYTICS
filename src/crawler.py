@@ -25,7 +25,9 @@ from src.config import (
     CHOTOT_DEFAULT_HEADERS,
     CRAWL_METADATA_PATH,
     INTERIM_PARQUET_PATH,
+    RAW_CSV_PATH,
     RAW_JSONL_PATH,
+    RAW_XLSX_PATH,
     REGION_BINH_DUONG,
     REGION_HCM,
 )
@@ -237,6 +239,48 @@ def raw_to_interim(
 
     df_dedup.to_parquet(out_path, index=False)
     logger.info(f"Saved interim deduplicated data ({len(df_dedup)} rows, {len(df_dedup.columns)} cols) to {out_path}.")
+
+    # Also export Raw CSV & Excel for Lecturer Verification (với ad_url & cột quan trọng lên đầu)
+    df_verify = df_raw.copy()
+    if "list_id" in df_verify.columns:
+        df_verify["ad_url"] = "https://www.nhatot.com/" + df_verify["list_id"].astype(str) + ".htm"
+
+    priority_cols = [
+        "ad_id", "list_id", "ad_url", "subject", "price", "price_string", "size", "deposit",
+        "region_name", "area_name", "ward_name", "street_name", "longitude", "latitude",
+        "account_id", "account_name", "company_ad", "furnishing_rent", "list_time",
+        "orig_list_time", "number_of_images", "body", "_crawled_at",
+    ]
+    ordered_cols = [c for c in priority_cols if c in df_verify.columns] + [
+        c for c in df_verify.columns if c not in priority_cols
+    ]
+    df_verify = df_verify[ordered_cols]
+
+    # Sanitize newlines in string/complex columns so Excel opens every listing on a single clean row
+    for col in df_verify.columns:
+        if df_verify[col].apply(lambda x: isinstance(x, (list, dict))).any():
+            df_verify[col] = df_verify[col].apply(
+                lambda x: json.dumps(x, ensure_ascii=False) if isinstance(x, (list, dict)) else str(x) if pd.notnull(x) else None
+            )
+        if df_verify[col].dtype == "object":
+            df_verify[col] = (
+                df_verify[col]
+                .astype(str)
+                .str.replace("\r\n", " ", regex=False)
+                .str.replace("\n", " ", regex=False)
+                .str.replace("\r", " ", regex=False)
+                .replace({"nan": None, "None": None})
+            )
+
+    df_verify.to_csv(RAW_CSV_PATH, index=False, encoding="utf-8-sig")
+    logger.info(f"Saved raw CSV for lecturer verification ({len(df_verify)} rows) to {RAW_CSV_PATH}.")
+
+    try:
+        df_verify.to_excel(RAW_XLSX_PATH, index=False, engine="openpyxl")
+        logger.info(f"Saved raw Excel workbook ({len(df_verify)} rows) to {RAW_XLSX_PATH}.")
+    except Exception as e:
+        logger.warning(f"Could not save Excel workbook: {e}")
+
     return df_dedup
 
 

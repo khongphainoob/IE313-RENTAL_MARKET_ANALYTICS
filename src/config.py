@@ -27,6 +27,8 @@ for folder in [DATA_RAW_DIR, DATA_INTERIM_DIR, DATA_PROCESSED_DIR, MODELS_DIR, F
 
 # File paths
 RAW_JSONL_PATH = DATA_RAW_DIR / "chotot_raw_hcm_bd.jsonl"
+RAW_CSV_PATH = DATA_RAW_DIR / "chotot_raw_hcm_bd.csv"
+RAW_XLSX_PATH = DATA_RAW_DIR / "chotot_raw_hcm_bd.xlsx"
 CRAWL_METADATA_PATH = DATA_RAW_DIR / "crawl_metadata.json"
 INTERIM_PARQUET_PATH = DATA_INTERIM_DIR / "deduplicated_data.parquet"
 PROCESSED_FULL_CSV = DATA_PROCESSED_DIR / "rental_cleaned_full.csv"
