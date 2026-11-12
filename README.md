@@ -6,7 +6,8 @@
 ### 👥 Nhóm sinh viên thực hiện:
 | STT | Họ và tên | MSSV | Lớp | Vai trò | GitHub / Email |
 | :---: | :--- | :---: | :---: | :--- | :--- |
-| **1** | **Trương Huy Hoàng** | **24520574** | HTTT2024 | Trưởng nhóm (Leader) | [@khongphainoob](https://github.com/khongphainoob) |
+| **1** | **Trương Huy Hoàng** | **24520574** | CNTT2024 | Trưởng nhóm (Leader) | [@khongphainoob](https://github.com/khongphainoob) |
+| **2** | **Lê Huy Hoàng** | **24520541** | CNTT2024 | Thành Viên | [@24520541-cmyk](https://github.com/24520541-cmyk) |
 
 ---
 
