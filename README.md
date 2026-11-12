@@ -1,6 +1,12 @@
 # 🏠 Southern Vietnam Rental Market Analytics: Fair-Value Pricing & Scam Detection
 > **Đồ án môn học:** IE313 - Phân tích và Trực quan hóa Dữ liệu (Data Analysis and Visualization)  
 > **Trường:** Đại học Công nghệ Thông tin - ĐHQG TP.HCM (UIT - VNUHCM)  
+> **Khoa:** Hệ thống Thông tin (Information Systems)  
+
+### 👥 Nhóm sinh viên thực hiện:
+| STT | Họ và tên | MSSV | Lớp | Vai trò | GitHub / Email |
+| :---: | :--- | :---: | :---: | :--- | :--- |
+| **1** | **Trương Huy Hoàng** | **24520574** | HTTT2024 | Trưởng nhóm (Leader) | [@khongphainoob](https://github.com/khongphainoob) |
 
 ---
 
