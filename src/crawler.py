@@ -7,12 +7,16 @@ Outputs raw data in JSON Lines (.jsonl) to preserve nested fields and line-break
 
 import argparse
 import datetime
+import gzip
 import json
 import logging
+import os
 import random
+import shutil
 import time
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -30,6 +34,7 @@ from src.config import (
     RAW_XLSX_PATH,
     REGION_BINH_DUONG,
     REGION_HCM,
+    SNAPSHOT_DIR,
 )
 
 logging.basicConfig(
@@ -74,25 +79,28 @@ def fetch_ads_page(
             time.sleep(wait_sec)
 
     logger.error(f"Failed to fetch area {area_id} offset {offset} after {max_retries} retries.")
-    return {"ads": [], "total": 0}
+    return {"ads": [], "total": 0, "_failed": True}
 
 
 def crawl_stratified(
     target_regions: Optional[List[int]] = None,
     max_per_area: Optional[int] = None,
-    output_jsonl: Optional[str] = None,
+    output_jsonl: Optional[Path] = None,
     request_delay: float = 0.35,
     overwrite: bool = False,
+    metadata_path: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Execute multi-stage stratified crawl across districts."""
     if target_regions is None:
         target_regions = [REGION_HCM, REGION_BINH_DUONG]
 
-    out_path = output_jsonl or RAW_JSONL_PATH
+    out_path = Path(output_jsonl) if output_jsonl else RAW_JSONL_PATH
+    meta_path = Path(metadata_path) if metadata_path else CRAWL_METADATA_PATH
     start_time = datetime.datetime.now()
     logger.info(f"Starting stratified crawl for regions {target_regions}. Output: {out_path}")
 
     total_requests = 0
+    failed_requests = 0
     total_raw_records = 0
     records_per_district: Dict[str, int] = {}
     seen_ad_ids = set()
@@ -141,6 +149,8 @@ def crawl_stratified(
                         limit=50,
                     )
                     total_requests += 1
+                    if resp.get("_failed"):
+                        failed_requests += 1
                     ads = resp.get("ads", [])
 
                     if not ads:
@@ -184,19 +194,104 @@ def crawl_stratified(
         "crawl_ended_at": end_time.isoformat(),
         "duration_minutes": round(duration_minutes, 2),
         "total_requests": total_requests,
+        "failed_requests": failed_requests,
         "total_raw_records_this_run": total_raw_records,
         "unique_ad_ids_total": len(seen_ad_ids),
         "target_regions": target_regions,
+        "max_per_area": max_per_area,
+        "output_file": out_path.name,
         "records_per_district": records_per_district,
     }
 
-    with open(CRAWL_METADATA_PATH, "w", encoding="utf-8") as meta_f:
+    with open(meta_path, "w", encoding="utf-8") as meta_f:
         json.dump(metadata, meta_f, ensure_ascii=False, indent=2)
 
     logger.info(
-        f"Crawl completed! Total raw records collected this run: {total_raw_records}. Metadata saved to {CRAWL_METADATA_PATH}."
+        f"Crawl completed! Total raw records collected this run: {total_raw_records}. Metadata saved to {meta_path}."
     )
     return metadata
+
+
+SNAPSHOT_EXIT_OK = 0
+SNAPSHOT_EXIT_INVALID = 2   # crawl finished but failed validation -> previous good snapshot kept
+SNAPSHOT_EXIT_LOCKED = 3    # another snapshot crawl is already running
+LOCK_STALE_HOURS = 2
+
+
+def crawl_daily_snapshot(
+    target_regions: Optional[List[int]] = None,
+    max_per_area: Optional[int] = 300,
+    request_delay: float = 0.35,
+) -> int:
+    """Crawl one dated snapshot into data/raw/snapshots/YYYY-MM-DD.jsonl.gz (panel data).
+
+    Repeating this daily lets us measure listing lifetime (tin biến mất sau bao lâu),
+    price changes over time, and enlarge the sample. The main raw file is NOT touched.
+
+    Safety:
+    - lock file prevents two crawls at once (scheduled + manual);
+    - the crawl is written to *.partial files and validated (src.snapshot_monitor) first —
+      only a passing crawl replaces that day's snapshot, so a bad run never destroys good data;
+    - every attempt is appended to snapshots/status_history.jsonl.
+    Returns an exit code (SNAPSHOT_EXIT_*).
+    """
+    from src.snapshot_monitor import list_snapshot_metadata, record_status, validate_snapshot
+
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    day = datetime.date.today().isoformat()
+    lock = SNAPSHOT_DIR / ".crawl.lock"
+    if lock.exists():
+        age_h = (time.time() - lock.stat().st_mtime) / 3600.0
+        if age_h < LOCK_STALE_HOURS:
+            logger.warning(f"Another snapshot crawl is running (lock {age_h:.1f}h old). Skipping.")
+            return SNAPSHOT_EXIT_LOCKED
+        logger.warning(f"Removing stale lock ({age_h:.1f}h old).")
+        lock.unlink()
+    lock.write_text(f"pid={os.getpid()} started={datetime.datetime.now().isoformat()}", encoding="utf-8")
+
+    plain_path = SNAPSHOT_DIR / f"{day}.partial.jsonl"
+    meta_partial = SNAPSHOT_DIR / f"{day}_metadata.partial.json"
+    gz_path = SNAPSHOT_DIR / f"{day}.jsonl.gz"
+    meta_path = SNAPSHOT_DIR / f"{day}_metadata.json"
+    try:
+        meta = crawl_stratified(
+            target_regions=target_regions,
+            max_per_area=max_per_area,
+            output_jsonl=plain_path,
+            request_delay=request_delay,
+            overwrite=True,
+            metadata_path=meta_partial,
+        )
+        previous = [m for d, m in list_snapshot_metadata() if d != day]
+        ok, errors, warnings = validate_snapshot(meta, previous)
+        status = {
+            "date": day,
+            "ok": ok,
+            "records": meta["total_raw_records_this_run"],
+            "failed_requests": meta.get("failed_requests", 0),
+            "errors": errors,
+            "warnings": warnings,
+        }
+        if not ok:
+            logger.error(f"Snapshot {day} FAILED validation: {errors}. Keeping previous data.")
+            plain_path.unlink(missing_ok=True)
+            meta_partial.unlink(missing_ok=True)
+            record_status(status)
+            return SNAPSHOT_EXIT_INVALID
+
+        with open(plain_path, "rb") as src, gzip.open(gz_path, "wb", compresslevel=9) as dst:
+            shutil.copyfileobj(src, dst)
+        plain_path.unlink()
+        meta_partial.replace(meta_path)
+        status["size_mb"] = round(gz_path.stat().st_size / 1e6, 1)
+        record_status(status)
+        logger.info(f"Snapshot {day} OK: {status['records']} records -> {gz_path} ({status['size_mb']} MB). Warnings: {warnings}")
+        return SNAPSHOT_EXIT_OK
+    except Exception as e:
+        record_status({"date": day, "ok": False, "errors": [f"crash: {type(e).__name__}: {e}"], "warnings": []})
+        raise
+    finally:
+        lock.unlink(missing_ok=True)
 
 
 def raw_to_interim(
@@ -315,7 +410,19 @@ if __name__ == "__main__":
         action="store_true",
         help="Overwrite existing raw jsonl file instead of appending",
     )
+    parser.add_argument(
+        "--snapshot",
+        action="store_true",
+        help="Daily panel mode: write data/raw/snapshots/YYYY-MM-DD.jsonl.gz, keep main raw file untouched",
+    )
     args = parser.parse_args()
+
+    if args.snapshot:
+        raise SystemExit(crawl_daily_snapshot(
+            target_regions=args.regions,
+            max_per_area=args.max_per_area or 300,
+            request_delay=args.delay,
+        ))
 
     crawl_stratified(
         target_regions=args.regions,

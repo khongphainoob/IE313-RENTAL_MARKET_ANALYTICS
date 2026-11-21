@@ -53,3 +53,16 @@ Thumbs.db
 *.tmp
 *.log
 
+
+# Daily snapshot crawls (~6-7 MB/day): keep only *_metadata.json in git.
+# The merged dataset v2 is committed once at freeze time.
+data/raw/snapshots/*.jsonl
+data/raw/snapshots/*.jsonl.gz
+data/raw/snapshots/logs/
+data/raw/snapshots/crawl.log
+!data/raw/snapshots/status_history.jsonl
+
+# Merged dataset: commit only the compressed full-fidelity file + metadata.
+# CSV/XLSX (~35 MB / 12 MB, regenerated nightly) are rebuilt with: python -m src.merge_snapshots
+data/raw/merged/chotot_merged_raw.csv
+data/raw/merged/chotot_merged_raw.xlsx

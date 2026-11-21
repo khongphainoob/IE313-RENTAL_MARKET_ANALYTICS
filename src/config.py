@@ -143,6 +143,19 @@ REGEX_PATTERNS = {
     "has_balcony_window": r"(ban công|cửa sổ|thoáng mát|view|ánh sáng|logia)",
 }
 
+# Ký túc xá / sleepbox / ở ghép: price is quoted PER BED/PERSON, not per room -> a different
+# product. Matched on the TITLE only (body matching hit "nước 100k/người" etc. far too often).
+# Such listings stay in the dataset (EDA segment) but are excluded from the room fair-price model.
+SHARED_DORM_TITLE_PATTERN = (
+    r"\bktx\b|k[ýí]\s*t[úu]c\s*x[áa]|sleep\s*box|giường tầng|\bdorm\b|homestay|ở ghép|phòng ghép|ghép phòng"
+    r"|\bshare\b|\bslot\b|/\s*người|/\s*giường|bạn cùng phòng|tìm bạn ở|tìm người ở"
+)
+# Place names that contain "KTX" but describe a location, e.g. "gần KTX khu B ĐHQG"
+SHARED_DORM_PLACE_EXCLUDE = (
+    r"(ktx|k[ýí]\s*t[úu]c\s*x[áa])\s*(khu\s*)?[ab]\b"
+    r"|(gần|ngay|cạnh|sát|sau|đối diện|khu vực)\s*(ktx|k[ýí]\s*t[úu]c\s*x[áa])"
+)
+
 # ==========================================
 # 7. SCHEMA DEFINITIONS (26-COLUMN STANDARD)
 # ==========================================
@@ -174,4 +187,39 @@ FINAL_SCHEMA_COLUMNS = [
     "valuation_gap_pct",
     "deal_status",
 ]
+
+# ==========================================
+# 8. EXTENDED COLUMNS (DATASET v2) — appended after the 26 standard columns
+# ==========================================
+# Listing metadata extracted from raw API fields that v1 did not use.
+LISTING_META_COLUMNS = [
+    "area_group",            # area_name with tiny districts merged (see AREA_GROUP_MIN_SAMPLES)
+    "is_shared_or_dorm",     # 1 = KTX / sleepbox / ở ghép (giá theo giường) -> loại khỏi mô hình giá phòng
+    "is_main_street",        # 1 = mặt tiền đường (API flag), 0 = không / không rõ
+    "is_alley",              # 1 = địa chỉ trong hẻm/kiệt/ngõ (từ street_number)
+    "has_price_change",      # 1 = giá hiện tại khác giá đăng ban đầu
+    "price_change_pct",      # (price - original_price) / original_price * 100; âm = đã giảm giá
+    "listing_age_days",      # list_time - orig_list_time (ngày); tin cũ được đẩy lại có giá trị lớn
+    "n_images",              # số ảnh đính kèm
+    "has_video",             # 1 = có video
+    "is_paid_promo",         # 1 = tin trả phí đẩy/ghim (is_sticky / special_display)
+    "has_shop",              # 1 = người đăng có trang cửa hàng trên Chợ Tốt
+    "seller_rating",         # điểm đánh giá trung bình người đăng (NaN = chưa có)
+    "seller_n_ratings",      # số lượt đánh giá người đăng (0 = chưa có)
+    "body_length",           # số ký tự mô tả
+    "account_ad_count",      # số tin của tài khoản trong mẫu
+    "account_n_areas",       # số quận/huyện khác nhau tài khoản đăng tin trong mẫu
+]
+
+# Districts with fewer cleaned listings than this are merged into a regional bucket
+# for group statistics (boxplots, Kruskal-Wallis). area_name itself is never modified.
+AREA_GROUP_MIN_SAMPLES = 30
+AREA_GROUP_OTHER_LABELS = {
+    "Tp Hồ Chí Minh": "HCM - Ngoại thành khác",
+    "Bình Dương": "Bình Dương - Khác",
+}
+
+# Snapshot crawling (daily panel) — compressed JSONL, one file per day.
+SNAPSHOT_DIR = DATA_RAW_DIR / "snapshots"
+MODEL_REPORT_PATH = DATA_PROCESSED_DIR / "model_report.json"
 
