@@ -8,7 +8,7 @@
 
 ## 1. Tóm tắt trong 1 phút
 
-- Nhóm đã crawl được **2.971 tin** phòng trọ từ Chợ Tốt (30 quận/huyện), làm sạch còn **2.678 tin**.
+- Nhóm đã crawl phòng trọ từ Chợ Tốt (30 quận/huyện) qua nhiều đợt, gộp được **7.046 tin** không trùng, làm sạch còn **6.324 tin**. Crawl tự động mỗi tối nên con số còn tăng tới ngày đóng băng (CN 29/11).
 - Code thu thập, làm sạch, mô hình đã có trong `src/`. **Phần còn thiếu là phân tích, biểu đồ, báo cáo, slide** — phần này B phụ trách chính.
 - Chia việc theo "tầng":
   - **A** lo phần **thượng nguồn**: crawler, làm sạch, ghép feature, mô hình, Streamlit.
@@ -38,8 +38,16 @@ jupyter notebook                # hoặc mở bằng VS Code
 Kiểm tra chạy được:
 ```bash
 python -c "import pandas as pd; print(pd.read_csv('data/processed/rental_cleaned_full.csv').shape)"
-# kỳ vọng: (2678, 118)
+# kỳ vọng: (6324, 140)
 ```
+
+> 🆕 **Cập nhật 21/11 (A đã làm xong phần sửa lỗi):**
+> - **Dữ liệu đã lên v2 sớm:** gộp đợt 10/11 + 21/11 = **7.046 tin thô → 6.324 tin sạch** (giữ 89.75%). Dùng luôn bản này; CN 29/11 A chạy lại lần cuối với các đợt crawl thêm (B chỉ cần Restart & Run All).
+> - Bản thô gộp: `data/raw/merged/chotot_merged_raw.jsonl.gz` (mở bằng `pd.read_json(path, lines=True)`; muốn CSV/Excel thì chạy `python -m src.merge_snapshots`). Có thêm cột `_first_seen`, `_last_seen`, `_n_seen`, `_price_first_seen`.
+> - Mô hình đã bỏ tiền cọc, dùng out-of-fold. R² CV thật = **0.67** (baseline 0.40). Kết quả chi tiết: `data/processed/model_report.json`.
+> - Cột mới B dùng được ngay: `area_group` (gộp 5 huyện ít mẫu — **dùng cột này cho boxplot/Kruskal-Wallis**), `is_shared_or_dorm` (KTX/sleepbox/ở ghép, giá theo giường), `is_main_street`, `is_alley`, `has_price_change`, `price_change_pct`, `listing_age_days`, `n_images`, `has_video`, `is_paid_promo`, `has_shop`, `seller_rating`, `seller_n_ratings`, `body_length`, `account_n_areas`. Đưa hết vào bảng B1.
+> - ⚠️ **Mọi phân tích giá phòng (B5, B6) lọc `is_shared_or_dorm == 0`**; KTX/ở ghép phân tích riêng như 1 phân khúc (giá theo giường). Kiểm tra độ chính xác cờ này luôn trong B2.
+> - Nhãn `deal_status` giờ có thêm `SHARED_DORM`.
 
 **Đọc trước (theo thứ tự, ~1–2 giờ):**
 1. `README.md` — tổng quan đề tài
@@ -340,7 +348,7 @@ premium_ci = (np.exp(ci) - 1) * 100
 
 Trước Họp 2, B đọc và **tự giải thích lại được**:
 1. Vì sao lọc ngoại lai theo IQR **từng quận** chứ không phải toàn bộ dữ liệu.
-2. Lỗi **leakage tiền cọc**: 82% tin có cọc = 1 tháng tiền thuê → dùng cọc để đoán giá là "chép đáp án"; R² giảm từ 0.90 xuống ~0.52 khi bỏ. Vì sao đây là điểm cộng chứ không phải điểm trừ.
+2. Lỗi **leakage tiền cọc**: 82% tin có cọc = 1 tháng tiền thuê → dùng cọc để đoán giá là "chép đáp án"; R² giảm từ 0.90 xuống 0.54 khi bỏ; sau khi tách tin KTX/ở ghép (giá theo giường) thì lên **0.64**. Vì sao đây là điểm cộng chứ không phải điểm trừ.
 3. **Out-of-fold prediction** là gì và vì sao phải dùng khi tính độ lệch giá.
 4. Đọc được biểu đồ SHAP của A.
 5. Vì sao không được gọi tin là "lừa đảo", chỉ là "nghi vấn – cần kiểm chứng".

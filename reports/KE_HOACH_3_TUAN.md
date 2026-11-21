@@ -13,7 +13,7 @@
 | Hạng mục | Tình trạng |
 |---|---|
 | Crawler Chợ Tốt phân tầng 30 quận/huyện | Chạy được, 2.971 tin thô × 104 cột |
-| Pipeline làm sạch 5 tầng + audit funnel | Chạy được, còn 2.678 tin sạch × 26 cột |
+| Pipeline làm sạch 5 tầng + audit funnel | Chạy được, còn 2.678 tin sạch × 26 cột *(cập nhật 21/11: bản gộp 7.046 → 6.324 tin sạch)* |
 | Feature: regex tiện ích, Haversine, seller_type, K-Means | Có |
 | Mô hình Ridge / RF / LightGBM + Isolation Forest | Có (nhưng **có lỗi nghiêm trọng**, xem 0.3) |
 | Streamlit dashboard | Có code (429 dòng) |
@@ -30,9 +30,10 @@
 
 | # | Lỗi | Bằng chứng | Cách sửa |
 |---|---|---|---|
-| 1 | **Rò rỉ biến mục tiêu (target leakage)**: mô hình dùng `deposit_million` làm input, mà **82% tin có tiền cọc = đúng 1 tháng giá thuê** | Có `deposit`: R² CV = 0.895. Bỏ `deposit`: R² CV = **0.518**, MAE 0.78 tr | Bỏ `deposit_million` khỏi feature. Báo cáo con số thật (~0.5) rồi cải thiện bằng feature mới (Phần 2) |
-| 2 | **Dự đoán trên chính dữ liệu đã train** → `valuation_gap_pct` gần như = 0 (median 0.0%) nên nhãn Deal/Scam vô nghĩa | `src/models.py`: `best_model.predict(X_full)` | Dùng **out-of-fold prediction** (`cross_val_predict`, 5-fold) để tính giá hợp lý cho từng tin |
-| 3 | `seller_type = "Môi giới trá hình"` chỉ có **7 tin** dù có **114 tài khoản đăng ≥4 tin (868 tin)** | Do giới hạn 140 tin/quận + luật hiện tại | Định nghĩa lại theo số tin/tài khoản + `company_ad` + `shop`; ghi rõ luật trong báo cáo |
+| 1 | ✅ **ĐÃ SỬA 21/11** — **Rò rỉ biến mục tiêu (target leakage)**: mô hình dùng `deposit_million` làm input, mà **82% tin có tiền cọc = đúng 1 tháng giá thuê** | Có `deposit`: R² CV = 0.90. Bỏ `deposit`: R² CV = 0.54 | Đã bỏ `deposit_million`. Dòng "THAM KHẢO: + tiền cọc" trong `model_report.json` giữ lại để minh chứng trong báo cáo |
+| 2 | ✅ **ĐÃ SỬA 21/11** — **Dự đoán trên chính dữ liệu đã train** → `valuation_gap_pct` gần như = 0 (median 0.0%) nên nhãn Deal/Scam vô nghĩa | `src/models.py` cũ: `best_model.predict(X_full)` | Đã chuyển sang **out-of-fold prediction** 5-fold; ngưỡng nhãn theo phân vị phần dư (5% / 10% / 90%) |
+| 3 | ✅ **ĐÃ XỬ LÝ 21/11** — `"Môi giới trá hình"` chỉ có 7 tin. *(Đính chính: 114 tài khoản đăng ≥4 tin phần lớn đã tự khai môi giới `company_ad=True`, nên con số 7 không sai — chỉ là nhóm quá nhỏ.)* | Trong nhóm tự khai cá nhân chỉ 13 tin thuộc tài khoản 4–9 tin | Thêm luật "đăng ở ≥2 quận" → 32 tin. Vẫn nhỏ: chỉ dùng mô tả, **không** dùng để kiểm định |
+| 8 | ✅ **PHÁT HIỆN & ĐÃ XỬ LÝ 21/11** — Các tin "rẻ bất thường" nhất trong v1 phần lớn là **KTX / sleepbox / ở ghép** — giá **theo giường**, không phải theo phòng → không phải tin ảo | 126 tin (4.7%), độ lệch giá trung vị **−56%** | Cờ `is_shared_or_dorm` (regex trên tiêu đề). Giữ trong dataset để EDA, **loại khỏi mô hình giá phòng**, nhãn `SHARED_DORM`. R² tăng 0.54 → **0.64** |
 | 4 | Nhãn `SCAM_RISK` **không có ground truth** | Chỉ là luật tự đặt | Đổi tên thành **"Nghi vấn bất thường – cần kiểm chứng"**; mở thủ công 30–50 tin qua `ad_url`, ghi kết quả → tính tỉ lệ đúng |
 | 5 | 47% tin **trùng tọa độ** (tâm phường/tâm đường) | `duplicated(lat,lon)` = 0.47 | Ghi vào phần Hạn chế; khi vẽ bản đồ dùng hexbin/choropleth thay vì chấm điểm |
 | 6 | Nhiều huyện quá ít mẫu: Cần Giờ 1, Tân Uyên 1, Bến Cát 7, Củ Chi 9, TDM 14 | `value_counts` | Gộp thành nhóm "Ngoại thành HCM" / "Bình Dương khác", hoặc loại khỏi so sánh theo quận |
@@ -106,7 +107,7 @@ Trong 104 cột thô mới dùng ~15. Các cột đáng khai thác:
 - Dùng Overpass API (miễn phí) lấy tọa độ: trường ĐH/CĐ, khu công nghiệp, chợ/siêu thị, **ga Metro số 1** (Bến Thành – Suối Tiên).
 - Feature: `dist_nearest_university_km`, `dist_nearest_metro_km`, `dist_nearest_industrial_km`, `n_poi_1km`.
 - File ranh giới quận/phường (GeoJSON) để vẽ **choropleth** trong Plotly/Power BI.
-- Kỳ vọng: giúp R² tăng từ ~0.52 lên rõ rệt — đúng chuyện "bỏ leakage, thay bằng feature có ý nghĩa".
+- Kỳ vọng: giúp R² tăng tiếp từ 0.64 (sau khi bỏ leakage và tách KTX) — đúng chuyện "bỏ leakage, thay bằng feature có ý nghĩa".
 
 ### E. (Tùy chọn, chỉ khi dư thời gian) Nguồn thứ 2
 - Lấy một mẫu nhỏ từ trang cho thuê khác để đối chiếu mặt bằng giá theo quận. Kiểm tra điều khoản/robots.txt trước; không bắt buộc.
@@ -172,9 +173,12 @@ Lát cắt thời gian ngắn · chỉ 1 nền tảng · lấy mẫu có hạn n
 
 | Việc | Người | Đầu ra | Hạn |
 |---|---|---|---|
-| Sửa leakage `deposit` + chuyển sang OOF prediction trong `src/models.py` | A | Code + bảng R² trước/sau | T3 24/11 |
-| Bật crawl hằng ngày (Task Scheduler), nâng `max-per-area` | A | `data/raw/snapshots/` có file mỗi ngày | T2 23/11 |
-| Trích feature từ cột thô (Phần 2.A) + sửa `seller_type` | A | Cột mới trong `src/features.py` | T5 26/11 |
+| ✅ Sửa leakage `deposit` + chuyển sang OOF prediction trong `src/models.py` (+ baseline, CV 5-fold, ablation, `model_report.json`) | A | Code + bảng R² trước/sau | xong 21/11 |
+| ✅ Bật crawl hằng ngày 21:00 (Task Scheduler `IE313_DailySnapshot`, chạy tới 06/12), `max-per-area` 300. Tự kiểm tra dữ liệu, thử lại 3 lần, không ghi đè snapshot tốt, báo lỗi bằng thông báo Windows. **Xem tình trạng: `python -m src.snapshot_monitor`** | A | `data/raw/snapshots/` — đợt 1: 5.318 tin, 4.068 tin mới so với 10/11 | xong 21/11 |
+| ✅ Trích feature từ cột thô (Phần 2.A) + sửa `seller_type` + cờ KTX/ở ghép + `area_group` | A | Cột mới trong `src/features.py` | xong 21/11 |
+| ✅ Chạy notebook 01 & 02 có output (chạy lại lần cuối khi đóng băng v2) | A | Notebook có output | xong 21/11 |
+| ✅ Gộp các đợt crawl (`python -m src.merge_snapshots`, tự chạy mỗi tối) → **7.046 tin thô → 6.324 tin sạch**, R² CV **0.67**. CN 29/11 chạy lại lần cuối với các đợt mới rồi đóng băng | A | `data/raw/merged/chotot_merged_raw.jsonl.gz` | xong 21/11 (chạy lại CN 29/11) |
+| Cập nhật `DATASET_DESCRIPTION.txt` / `DATASET_METADATA.md` / README theo v2 (số tin, cột mới, R² thật) | A | Tài liệu khớp số liệu | CN 29/11 |
 | Đọc hết codebook, làm bảng "hiểu từng cột" (3.0) | B (A review) | `reports/hieu_du_lieu.md` | T4 25/11 |
 | Mở rộng regex (Phần 2.B) + kiểm tay 30 tin/regex | B | `src/text_features.py` + `reports/regex_check/` | T6 27/11 |
 | Lấy POI OSM + GeoJSON ranh giới (Phần 2.D) | B | `src/external_features.py` + `data/external/` | T7 28/11 |
@@ -239,7 +243,7 @@ Lát cắt thời gian ngắn · chỉ 1 nền tảng · lấy mẫu có hạn n
 
 **Về dữ liệu**
 1. Dữ liệu lấy từ đâu, bằng cách nào, có hợp lệ không? Vì sao lấy mẫu 140 tin/quận mà không lấy hết?
-2. Vì sao từ 2.971 còn 2.678? Từng bước loại bao nhiêu, vì sao?
+2. Vì sao từ 7.046 còn 6.324? Từng bước loại bao nhiêu, vì sao? (xem `data/processed/data_audit_report.json`)
 3. Vì sao lọc ngoại lai theo IQR **từng quận** chứ không phải toàn bộ?
 4. Tiền cọc khuyết 31% điền thế nào? Có ảnh hưởng kết quả không?
 5. Regex `has_ac` có bắt nhầm không? Độ chính xác bao nhiêu?
@@ -252,8 +256,8 @@ Lát cắt thời gian ngắn · chỉ 1 nền tảng · lấy mẫu có hạn n
 10. Tương quan khoảng cách – giá có phải quan hệ nhân quả không?
 
 **Về mô hình**
-11. Vì sao ban đầu R² 0.9 mà sau còn 0.5? (Leakage tiền cọc — **nói thẳng, đây là điểm cộng** vì cho thấy nhóm hiểu dữ liệu.)
-12. R² 0.5–0.6 có tệ không? Phần còn lại do đâu? (Ảnh, chất lượng thực tế, thương lượng… không có trong dữ liệu.)
+11. Vì sao ban đầu R² 0.9 mà sau còn 0.54, rồi lên 0.64? (Leakage tiền cọc → bỏ; rồi phát hiện KTX/ở ghép giá theo giường làm nhiễu → tách riêng. **Nói thẳng, đây là điểm cộng** vì cho thấy nhóm hiểu dữ liệu.)
+12. R² ~0.64 có tệ không? (So với baseline 0.39.) Phần còn lại do đâu? (Ảnh, chất lượng thực tế, thương lượng… không có trong dữ liệu.)
 13. Làm sao biết tin "nghi vấn" thật sự là tin ảo? (Kiểm chứng tay x/50 tin; không khẳng định là lừa đảo.)
 14. Vì sao chọn k=? cho K-Means?
 15. Ứng dụng thực tế của đồ án cho người đi thuê là gì?

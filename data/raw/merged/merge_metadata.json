@@ -1,0 +1,25 @@
+{
+  "merged_at": "2026-11-21T13:45:43",
+  "sources": [
+    {
+      "crawl_date": "2026-11-10",
+      "file": "data\\raw\\chotot_raw_hcm_bd.jsonl",
+      "rows": 2971,
+      "unique_ads": 2970
+    },
+    {
+      "crawl_date": "2026-11-21",
+      "file": "data\\raw\\snapshots\\2026-11-21.jsonl.gz",
+      "rows": 5318,
+      "unique_ads": 5313
+    }
+  ],
+  "total_unique_ads": 7046,
+  "seen_in_multiple_crawls": 1237,
+  "price_changed_between_crawls": 157,
+  "columns": 111,
+  "by_region": {
+    "Tp Hồ Chí Minh": 6509,
+    "Bình Dương": 537
+  }
+}

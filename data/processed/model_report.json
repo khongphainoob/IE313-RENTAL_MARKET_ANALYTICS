@@ -1,0 +1,140 @@
+{
+  "generated_at": "2026-11-21T13:46:24",
+  "n_listings": 6324,
+  "n_model_listings": 6104,
+  "n_shared_dorm_excluded": 220,
+  "cv": "5-fold KFold(shuffle=True, random_state=42)",
+  "target": "price_million",
+  "excluded_leaky_features": [
+    "deposit_million"
+  ],
+  "features_used": [
+    "size_m2",
+    "dist_to_q1_km",
+    "dist_to_vnuhcm_km",
+    "has_mezzanine",
+    "has_ac",
+    "is_free_curfew",
+    "has_balcony_window",
+    "is_main_street",
+    "is_alley",
+    "area_name_Huyện Bình Chánh",
+    "area_name_Huyện Cần Giờ",
+    "area_name_Huyện Củ Chi",
+    "area_name_Huyện Hóc Môn",
+    "area_name_Huyện Nhà Bè",
+    "area_name_Quận 1",
+    "area_name_Quận 10",
+    "area_name_Quận 11",
+    "area_name_Quận 12",
+    "area_name_Quận 3",
+    "area_name_Quận 4",
+    "area_name_Quận 5",
+    "area_name_Quận 6",
+    "area_name_Quận 7",
+    "area_name_Quận 8",
+    "area_name_Quận Bình Thạnh",
+    "area_name_Quận Bình Tân",
+    "area_name_Quận Gò Vấp",
+    "area_name_Quận Phú Nhuận",
+    "area_name_Quận Tân Bình",
+    "area_name_Quận Tân Phú",
+    "area_name_Thành phố Dĩ An",
+    "area_name_Thành phố Thuận An",
+    "area_name_Thành phố Thủ Dầu Một",
+    "area_name_Thành phố Thủ Đức",
+    "area_name_Thị xã Bến Cát",
+    "area_name_Thị xã Tân Uyên",
+    "furnishing_status_Không rõ",
+    "furnishing_status_Nhà trống",
+    "furnishing_status_Đầy đủ"
+  ],
+  "best_model": "LightGBM",
+  "benchmarks": {
+    "Baseline_DistrictMedian": {
+      "R2": 0.4002,
+      "MAE_Million": 0.799,
+      "RMSE_Million": 1.135,
+      "MAPE_Pct": 22.37
+    },
+    "Ridge": {
+      "R2": 0.5825,
+      "MAE_Million": 0.666,
+      "RMSE_Million": 0.947,
+      "MAPE_Pct": 18.63
+    },
+    "RandomForest": {
+      "R2": 0.6548,
+      "MAE_Million": 0.626,
+      "RMSE_Million": 0.861,
+      "MAPE_Pct": 17.86
+    },
+    "LightGBM": {
+      "R2": 0.6657,
+      "MAE_Million": 0.616,
+      "RMSE_Million": 0.847,
+      "MAPE_Pct": 17.57
+    }
+  },
+  "best_metrics": {
+    "R2": 0.6657,
+    "MAE_Million": 0.616,
+    "RMSE_Million": 0.847,
+    "MAPE_Pct": 17.57
+  },
+  "ablation": [
+    {
+      "step": "1. Diện tích + Quận/Huyện",
+      "n_features": 28,
+      "R2": 0.5914,
+      "MAE_Million": 0.698,
+      "RMSE_Million": 0.936,
+      "MAPE_Pct": 20.57
+    },
+    {
+      "step": "2. + Khoảng cách tới Q1 & ĐHQG",
+      "n_features": 30,
+      "R2": 0.6192,
+      "MAE_Million": 0.67,
+      "RMSE_Million": 0.904,
+      "MAPE_Pct": 19.37
+    },
+    {
+      "step": "3. + Nội thất & tiện ích regex v1",
+      "n_features": 37,
+      "R2": 0.6634,
+      "MAE_Million": 0.619,
+      "RMSE_Million": 0.85,
+      "MAPE_Pct": 17.67
+    },
+    {
+      "step": "4. + Mặt tiền / hẻm",
+      "n_features": 39,
+      "R2": 0.6657,
+      "MAE_Million": 0.616,
+      "RMSE_Million": 0.847,
+      "MAPE_Pct": 17.57
+    },
+    {
+      "step": "THAM KHẢO: + tiền cọc (RÒ RỈ — không dùng)",
+      "n_features": 40,
+      "R2": 0.9169,
+      "MAE_Million": 0.203,
+      "RMSE_Million": 0.422,
+      "MAPE_Pct": 6.52
+    }
+  ],
+  "deal_thresholds_gap_pct": {
+    "q05_extreme_low": -31.41,
+    "q10_low": -23.86,
+    "q90_high": 26.64
+  },
+  "deal_breakdown": {
+    "FAIR_PRICE": 4880,
+    "OVERPRICED": 612,
+    "GOOD_DEAL": 525,
+    "SHARED_DORM": 220,
+    "SCAM_RISK": 87
+  },
+  "total_scored_records": 6324
+}
